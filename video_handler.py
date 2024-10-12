@@ -42,13 +42,13 @@ class Scene():
 
 
 class VideoHandler():
-    CACHE_ENABLED = False
+    CACHE_ENABLED = True
 
     def __init__(self, video_path: str):
         self.video_path = video_path
         self.cache_file = (
             f"cache/{str(hash(video_path))}.json" if self.CACHE_ENABLED else 
-            f"cache/{len(os.listdir("cache")) + 1}.json"
+            f"cache/{len(os.listdir('cache')) + 1}.json"
         )
 
         self.video = VideoFileClip(video_path)
