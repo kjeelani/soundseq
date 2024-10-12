@@ -131,4 +131,4 @@ for idx, sounds in enumerate(scene_sounds):
     for audio_file in closest_audio_files:
         video_handler.video = place_audio(video_handler, f"{SFX_FOLDER_PATH}/{audio_file}", scenes[idx].start, scenes[idx].end - scenes[idx].start)
 
-video_handler.video.write_videofile("output/processed_vid_soutsuke.mp4", codec="libx264", audio_codec="aac")
+video_handler.video.write_videofile("video/output/processed_vid_soutsuke.mp4", codec="libx264", audio_codec="aac")
