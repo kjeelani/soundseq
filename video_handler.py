@@ -47,7 +47,7 @@ class VideoHandler():
     def __init__(self, video_path: str):
         self.video_path = video_path
         self.cache_file = (
-            f"cache/{str(hash(video_path))}.json" if self.CACHE_ENABLED else 
+            f"cache/{os.path.splitext(os.path.basename(video_path))[0]}.json" if self.CACHE_ENABLED else 
             f"cache/{len(os.listdir("cache")) + 1}.json"
         )
 
