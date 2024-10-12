@@ -3,3 +3,6 @@
 /cache
 /video
 /__pycache__
+/SFX
+/venv
+/test_images
