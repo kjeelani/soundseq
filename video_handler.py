@@ -42,13 +42,13 @@ class Scene():
 
 
 class VideoHandler():
-    CACHE_ENABLED = False
+    CACHE_ENABLED = True
 
     def __init__(self, video_path: str):
         self.video_path = video_path
         self.cache_file = (
             f"cache/{os.path.splitext(os.path.basename(video_path))[0]}.json" if self.CACHE_ENABLED else 
-            f"cache/{len(os.listdir("cache")) + 1}.json"
+            f"cache/{len(os.listdir('cache')) + 1}.json"
         )
 
         self.video = VideoFileClip(video_path)
@@ -93,7 +93,7 @@ class VideoHandler():
         grid_image.paste(images[2], (0, img_height)) # BL
         grid_image.paste(images[3], (img_width, img_height)) # BR
 
-        grid_image.save(f"test{i}.png")
+        grid_image.save(f"test_images/test{i}.png")
         return grid_image
 
     def analyze_scene(self, scene: Scene, kf_per_scene: int, i = 0):
@@ -150,6 +150,4 @@ class VideoHandler():
                 scene_dicts = json.load(f)
             return [Scene.from_dict(scene) for scene in scene_dicts]
         return None
-
-test = VideoHandler("input/test_vid2.mp4")
 

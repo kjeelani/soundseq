@@ -3,4 +3,7 @@
 /cache
 /video
 /__pycache__
-/audio
+/SFX
+/venv
+/test_images
+*.mp4
