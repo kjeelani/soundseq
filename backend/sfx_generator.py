@@ -3,6 +3,7 @@ from video_handler import VideoHandler
 from moviepy.editor import AudioFileClip, CompositeAudioClip
 from time import sleep
 import numpy as np
+from pathlib import Path
 import voyageai
 import faiss
 import json
@@ -76,7 +77,7 @@ def extract_sound(actions, batch):
         sound_lists.append(sounds)
     return sound_lists
 
-def rag_sfx(embeddings, sfx_tags, audio_files, threshold=np.inf):
+def rag_sfx(index, embeddings, sfx_tags, audio_files, threshold=np.inf):
     distances, indices = index.search(np.array(embeddings, dtype='float32'), 1)
     return [audio_files[sfx_tags[idx[0]]] for dist, idx in zip(distances, indices) if dist[0] < threshold]
 
@@ -98,36 +99,38 @@ def place_audio(video_handler, audio_file_path, start_time, scene_duration):
     
     return video_with_audio
 
-video_handler = VideoHandler("video/input/soutsuke_silent.mp4")
-scenes = video_handler.scenes
-scene_sounds = extract_sound([scene.caption for scene in scenes], batch=True)
+def generate_sfx(filepath):
+    video_handler = VideoHandler(filepath)
+    scenes = video_handler.scenes
+    scene_sounds = extract_sound([scene.caption for scene in scenes], batch=True)
 
-# File Metadata
-SFX_FOLDER_PATH = 'SFX'
-with open(f'{SFX_FOLDER_PATH}/metadata.json', 'r') as f:
-    tag_data = json.load(f)
-sfx_tags = [entry['tag'] for entry in tag_data]
-audio_files = {entry['tag']: entry['audio_file'] for entry in tag_data}
-sfx_emb = np.array(vo.embed(sfx_tags, model="voyage-3").embeddings)
+    # File Metadata
+    SFX_FOLDER_PATH = 'SFX'
+    with open(f'{SFX_FOLDER_PATH}/metadata.json', 'r') as f:
+        tag_data = json.load(f)
+    sfx_tags = [entry['tag'] for entry in tag_data]
+    audio_files = {entry['tag']: entry['audio_file'] for entry in tag_data}
+    sfx_emb = np.array(vo.embed(sfx_tags, model="voyage-3").embeddings)
 
-# Setup RAG
-dimension = sfx_emb.shape[1]
-index = faiss.IndexFlatL2(dimension)
-index.add(sfx_emb)
+    # Setup RAG
+    dimension = sfx_emb.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(sfx_emb)
 
-# Scene Descriptions -> Embeddings
-for idx, sounds in enumerate(scene_sounds):
-    sounds_emb = np.array(vo.embed(sounds, model="voyage-3").embeddings)
-    closest_audio_files = rag_sfx(sounds_emb, sfx_tags, audio_files, threshold=1.3)
- 
-    # Rate limiting to avoid API issues
-    sleep(0.3)
+    # Scene Descriptions -> Embeddings
+    for idx, sounds in enumerate(scene_sounds):
+        sounds_emb = np.array(vo.embed(sounds, model="voyage-3").embeddings)
+        closest_audio_files = rag_sfx(index, sounds_emb, sfx_tags, audio_files, threshold=1.3)
+    
+        # Rate limiting to avoid API issues
+        sleep(0.3)
 
-    # Print the list of closest SFX files for the current scene
-    print(f"{scenes[idx].caption}: {sounds}: {closest_audio_files}")
+        # Print the list of closest SFX files for the current scene
+        print(f"{scenes[idx].caption}: {sounds}: {closest_audio_files}")
 
-    # Place sounds
-    for audio_file in closest_audio_files:
-        video_handler.video = place_audio(video_handler, f"{SFX_FOLDER_PATH}/{audio_file}", scenes[idx].start, scenes[idx].end - scenes[idx].start)
+        # Place sounds
+        for audio_file in closest_audio_files:
+            video_handler.video = place_audio(video_handler, f"{SFX_FOLDER_PATH}/{audio_file}", scenes[idx].start, scenes[idx].end - scenes[idx].start)
 
-video_handler.video.write_videofile("video/output/processed_vid_soutsuke.mp4", codec="libx264", audio_codec="aac")
+    out_name = f"video/output/processed_{Path(filepath).stem}.mp4"
+    video_handler.video.write_videofile(out_name, codec="libx264", audio_codec="aac")
