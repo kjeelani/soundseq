@@ -134,3 +134,4 @@ def generate_sfx(filepath):
 
     out_name = f"video/output/processed_{Path(filepath).stem}.mp4"
     video_handler.video.write_videofile(out_name, codec="libx264", audio_codec="aac")
+    return out_name
