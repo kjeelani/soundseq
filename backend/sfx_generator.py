@@ -1,5 +1,5 @@
 from openai import OpenAI
-from video_handler import Scene, VideoHandler
+from video_handler import VideoHandler
 from moviepy.editor import AudioFileClip, CompositeAudioClip
 from time import sleep
 import numpy as np
@@ -76,9 +76,9 @@ def extract_sound(actions, batch):
         sound_lists.append(sounds)
     return sound_lists
 
-def rag_sfx(embeddings, sfx_tags, audio_files):
-    _, indices = index.search(np.array(embeddings, dtype='float32'), 1)
-    return [audio_files[sfx_tags[idx[0]]] for idx in indices]
+def rag_sfx(embeddings, sfx_tags, audio_files, threshold=np.inf):
+    distances, indices = index.search(np.array(embeddings, dtype='float32'), 1)
+    return [audio_files[sfx_tags[idx[0]]] for dist, idx in zip(distances, indices) if dist[0] < threshold]
 
 def place_audio(video_handler, audio_file_path, start_time, scene_duration):
     """
@@ -98,7 +98,7 @@ def place_audio(video_handler, audio_file_path, start_time, scene_duration):
     
     return video_with_audio
 
-video_handler = VideoHandler("video/input/test_vid_soutsuke.mp4")
+video_handler = VideoHandler("video/input/soutsuke_silent.mp4")
 scenes = video_handler.scenes
 scene_sounds = extract_sound([scene.caption for scene in scenes], batch=True)
 
@@ -117,15 +117,14 @@ index.add(sfx_emb)
 
 # Scene Descriptions -> Embeddings
 for idx, sounds in enumerate(scene_sounds):
-    print(f"Processing scene: {sounds}")
     sounds_emb = np.array(vo.embed(sounds, model="voyage-3").embeddings)
-    closest_audio_files = rag_sfx(sounds_emb, sfx_tags, audio_files)
+    closest_audio_files = rag_sfx(sounds_emb, sfx_tags, audio_files, threshold=1.3)
  
     # Rate limiting to avoid API issues
     sleep(0.3)
 
     # Print the list of closest SFX files for the current scene
-    print(f"SFX files {sounds}: {closest_audio_files}")
+    print(f"{scenes[idx].caption}: {sounds}: {closest_audio_files}")
 
     # Place sounds
     for audio_file in closest_audio_files:
