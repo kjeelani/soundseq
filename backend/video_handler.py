@@ -8,17 +8,17 @@ from scenedetect.detectors import ContentDetector
 
 from image_analyzer import get_semantic_image_desc
 import json
-from sys import exit
+import numpy as np
 
 class Scene():
 
-    def __init__(self, start, end, caption=""):
+    def __init__(self, start, end, captions=[]):
         self.start = start
         self.end = end
-        self.caption = caption
+        self.captions = captions
     
     def __repr__(self):
-        return f"Scene(start={self.start}, end={self.end}, caption={self.caption})"
+        return f"Scene(start={self.start}, end={self.end}, caption={self.captions})"
     
     def to_dict(self):
         """
@@ -27,7 +27,7 @@ class Scene():
         return {
             "start": self.start,
             "end": self.end,
-            "caption": self.caption
+            "captions": self.captions
         }
 
     @classmethod
@@ -37,8 +37,8 @@ class Scene():
         """
         start = scene_dict.get("start")
         end = scene_dict.get("end")
-        caption = scene_dict.get("caption", "")
-        return cls(start, end, caption)
+        captions = scene_dict.get("captions", [])
+        return cls(start, end, captions)
 
 
 class VideoHandler():
@@ -101,30 +101,34 @@ class VideoHandler():
         duration, fps = scene_clip.duration, scene_clip.fps
         total_frames = int(duration * fps)
 
-        # Get 4 images
+        # Get images
         images = []
         with tempfile.TemporaryDirectory() as temp_dir:
-            for fn in range(0, total_frames, total_frames // kf_per_scene):
+            for fn in np.linspace(0, total_frames - 1, kf_per_scene, dtype=int):
                 frame = self.video.get_frame(scene.start + fn / fps)
                 img = Image.fromarray(frame)
                 images.append(img)
-        
-            # Make images in a 2x2 grid
-            grid_img = self.compose_images(images, i = i)
-            img_path = f"{temp_dir}/temp.png"
-            grid_img.save(img_path)
-            scene.caption = get_semantic_image_desc(img_path)
-            
+
+            # Process multiple panels per scene.
+            scene_descrip = []
+            for panel_idx in range(len(images) // 4):
+                # Make images in a 2x2 grid
+                grid_img = self.compose_images(images[panel_idx * 4: (panel_idx + 1) * 4], i=i + panel_idx)
+                img_path = f"{temp_dir}/temp.png"
+                grid_img.save(img_path)
+                scene_descrip.append(get_semantic_image_desc(img_path))
+            scene.captions = scene_descrip
+
         scene_clip.close()
         
-    def generate_scenes(self, keyframe_per_scene=4) -> List[Scene]:
+    def generate_scenes(self, keyframe_per_scene=8) -> List[Scene]:
         """
         Extracts frames intelligently using pyscene to split up video into scenes
         and finding the main action of the scene
         """           
         scenes: List[Scene] = self.find_scenes()
         for i, scene in enumerate(scenes):
-            self.analyze_scene(scene, keyframe_per_scene, i = i)
+            self.analyze_scene(scene, keyframe_per_scene, i = 2 * i)
         return scenes
     
     def store_cache(self):

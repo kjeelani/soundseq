@@ -24,6 +24,28 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 vo = voyageai.Client(api_key=VOYAGE_API_KEY)
 
+def panel_concat(scenes):
+    """Each scene has a list of captions. This function flattens the captions for all scenes into one list."""
+    captions = []
+    for scene in scenes:
+        captions.extend(scene.captions)
+    return captions
+
+def panel_process(scene_sounds, panels_per_scene):
+    """Combine sounds for each scene back together because sounds were generated for each panel and there are multiple
+    panels per scene.
+    >>> panel_process([['shoe scuff', 'wood creaking', 'ambient chatter'], ['shout', 'foot stomp', 'tension-filled silence'], 2)
+    >>> [['shoe scuff', 'wood creaking', 'ambient chatter', 'shout', 'foot stomp', 'tension-filled silence']]
+    """
+    output = []
+    for i in range(0, len(scene_sounds), panels_per_scene):
+        combined_sounds = []
+        for j in range(panels_per_scene):
+            if i + j < len(scene_sounds): 
+                combined_sounds.extend(scene_sounds[i + j])
+        output.append(combined_sounds)
+    return output
+
 def extract_sound(actions, batch):
     """
     Distill Action to relevant SFX.
@@ -78,8 +100,8 @@ def extract_sound(actions, batch):
     return sound_lists
 
 def rag_sfx(index, embeddings, sfx_tags, audio_files, threshold=np.inf):
-    distances, indices = index.search(np.array(embeddings, dtype='float32'), 1)
-    return [audio_files[sfx_tags[idx[0]]] for dist, idx in zip(distances, indices) if dist[0] < threshold]
+    distances, indices = index.search(np.array(embeddings, dtype='float32'), 3)
+    return [audio_files[sfx_tags[idx[i]]] for dist, idx in zip(distances, indices) for i in range(3) if dist[i] < threshold]
 
 def place_audio(video_handler, audio_file_path, start_time, scene_duration):
     """
@@ -102,7 +124,7 @@ def place_audio(video_handler, audio_file_path, start_time, scene_duration):
 def generate_sfx(filepath):
     video_handler = VideoHandler(filepath)
     scenes = video_handler.scenes
-    scene_sounds = extract_sound([scene.caption for scene in scenes], batch=True)
+    scene_sounds = panel_process(extract_sound(panel_concat(scenes), batch=True), panels_per_scene=2)
 
     # File Metadata
     SFX_FOLDER_PATH = 'SFX'
@@ -126,7 +148,7 @@ def generate_sfx(filepath):
         sleep(0.3)
 
         # Print the list of closest SFX files for the current scene
-        print(f"{scenes[idx].caption}: {sounds}: {closest_audio_files}")
+        print(f"{sounds}: {closest_audio_files}")
 
         # Place sounds
         for audio_file in closest_audio_files:
@@ -135,3 +157,5 @@ def generate_sfx(filepath):
     out_name = f"video/output/processed_{Path(filepath).stem}.mp4"
     video_handler.video.write_videofile(out_name, codec="libx264", audio_codec="aac")
     return out_name
+
+generate_sfx("video/input/soutsuke_silent.mp4")
