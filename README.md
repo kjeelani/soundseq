@@ -3,7 +3,10 @@
 SoundSeq is a prototype for an AI-powered SFX Sequencer that can automatically apply relevant sound effects at the right places given a video. It won Most Impressive Technical Feat in Pear x OpenAI's Hackathon!
 
 ## Use Cases
-We see this being useful for batch automation of content creation (i.e reels or shorts), independent film creators (where SFX can take an upwards of 3 hours to find and place sounds), and dynamic SFX generation in games.
+We see this being useful for:
+1) batch automation of content creation (i.e reels or shorts)
+2) Independent film creators and animators (SFX can take an upwards of 3 hours to find and place sounds)
+3) Dynamic SFX generation within games
 
 ## Architecture Diagram
 ![image](https://github.com/user-attachments/assets/d5403fcd-e5af-42a2-8b50-e7213aea69e5)
