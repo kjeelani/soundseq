@@ -14,7 +14,7 @@ We see this being useful for:
 1) The inputted video is broken up into scenes through a simple scene detection algorithm
 2) Then we grab 4 keyframes per scene and arrange it into a "comic panel" to allow GPT Vision to understand the underlying action
 3) We have another LLM layer to determine what SFX best fits this action
-4) We then match the given SFX descriptions to a RA (Voyage.ai) containing a curated selection of SFX
+4) We then match the given SFX descriptions to a RAG (Voyage.ai) containing a curated selection of SFX
 
 ## Future Steps
 
